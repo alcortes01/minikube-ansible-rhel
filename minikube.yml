@@ -1,0 +1,156 @@
+---
+- name: Install and start Minikube on RHEL 9 using Docker CE
+  hosts: all
+  vars:
+    minikube_version: "v1.32.0"
+    non_root_user: vagrant  # <-- Replace with your remote user
+
+  tasks:
+    - name: Install required packages for repository management
+      become: true
+      ansible.builtin.yum:
+        name:
+          - yum-utils
+          - device-mapper-persistent-data
+          - lvm2
+        state: present
+
+    - name: Add Docker CE repository
+      become: true
+      ansible.builtin.yum_repository:
+        name: docker-ce
+        description: Docker CE Stable - x86_64
+        baseurl: https://download.docker.com/linux/centos/9/x86_64/stable
+        gpgcheck: yes
+        gpgkey: https://download.docker.com/linux/centos/gpg
+        enabled: yes
+        state: present
+
+    - name: Install Docker CE packages
+      become: true
+      ansible.builtin.yum:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+
+    - name: Enable and start Docker service
+      become: true
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Ensure non-root user is in docker group
+      become: true
+      ansible.builtin.user:
+        name: "{{ non_root_user }}"
+        groups: docker
+        append: yes
+
+    - name: Install additional required packages
+      become: true
+      ansible.builtin.yum:
+        name:
+          - conntrack
+          - wget
+          - curl
+          - socat
+          - jq
+          - unzip
+        state: present
+
+    - name: Check if minikube binary exists and get checksum
+      become: true
+      ansible.builtin.stat:
+        path: /usr/local/bin/minikube
+        checksum_algorithm: sha256
+      register: minikube_stat
+
+    - name: Download minikube binary idempotently
+      become: true
+      ansible.builtin.get_url:
+        url: "https://storage.googleapis.com/minikube/releases/{{ minikube_version }}/minikube-linux-amd64"
+        dest: /usr/local/bin/minikube
+        mode: '0755'
+        force: no
+        checksum: "{{ 'sha256:' + minikube_stat.stat.checksum if minikube_stat.stat.exists else omit }}"
+
+    - name: Verify minikube binary exists
+      become: true
+      ansible.builtin.stat:
+        path: /usr/local/bin/minikube
+      register: minikube_binary
+
+    - name: Fail if minikube binary missing
+      ansible.builtin.fail:
+        msg: "Minikube binary not found at /usr/local/bin/minikube"
+      when: not minikube_binary.stat.exists
+
+    # Run all minikube & docker related commands as non-root user
+
+    - name: Check Minikube status as non-root user
+      ansible.builtin.command:
+        cmd: /usr/local/bin/minikube status --format "{% raw %}{{.Host}}{% endraw %}"
+      register: minikube_status
+      failed_when: false
+      changed_when: false
+      become: false
+      remote_user: "{{ non_root_user }}"
+
+    - name: Start Minikube if not running as non-root user
+      ansible.builtin.command:
+        cmd: /usr/local/bin/minikube start --driver=docker
+      when: minikube_status.stdout != "Running"
+      become: false
+      remote_user: "{{ non_root_user }}"
+
+    - name: Verify Minikube version as non-root user
+      ansible.builtin.command:
+        cmd: /usr/local/bin/minikube version
+      register: minikube_version_output
+      changed_when: false
+      become: false
+      remote_user: "{{ non_root_user }}"
+
+    - name: Show Minikube version
+      ansible.builtin.debug:
+        msg: "{{ minikube_version_output.stdout }}"
+
+    - name: Verify Minikube is running as non-root user
+      ansible.builtin.command:
+        cmd: /usr/local/bin/minikube status --format "{% raw %}{{.Host}}{% endraw %}"
+      register: minikube_status_check
+      changed_when: false
+      become: false
+      remote_user: "{{ non_root_user }}"
+
+    - name: Report Minikube running status
+      ansible.builtin.debug:
+        msg: >
+          {% if minikube_status_check.stdout == "Running" %}
+            Minikube is running.
+          {% else %}
+            Minikube is NOT running. Status output: {{ minikube_status_check.stdout }}
+          {% endif %}
+
+    - name: Inform about manual dashboard URL retrieval and SSH tunneling
+      ansible.builtin.debug:
+        msg: |
+          To access the Minikube Kubernetes dashboard, you can manually run:
+            minikube dashboard --url
+          This will output the full URL to open in your web browser.
+
+          Note: By default, the dashboard URL is accessible only from the machine running Minikube.
+          To access it remotely, it is recommended to set up an SSH tunnel, for example:
+
+            ssh -L 8001:127.0.0.1:<dashboard-port> <user>@<minikube-host>
+
+          Replace <dashboard-port> with the port shown by the dashboard command and <user>@<minikube-host> appropriately.
+
+          Keep the SSH tunnel open to maintain access to the dashboard.
+
+          This is crucial since the Minikube dashboard proxy listens on localhost only.
+
+          For more details, see https://minikube.sigs.k8s.io/docs/handbook/accessing/
