@@ -2,7 +2,8 @@
 - name: Install and start Minikube on RHEL 9 using Docker CE
   hosts: all
   vars:
-    minikube_version: "v1.32.0"
+    minikube_vers: "v1.33.0"
+    kubectl_vers: "v1.33.0"
     non_root_user: vagrant  # <-- Replace with your remote user
 
   tasks:
@@ -71,7 +72,8 @@
     - name: Download minikube binary idempotently
       become: true
       ansible.builtin.get_url:
-        url: "https://storage.googleapis.com/minikube/releases/{{ minikube_version }}/minikube-linux-amd64"
+        # url: "https://storage.googleapis.com/minikube/releases/{{ minikube_version }}/minikube-linux-amd64"
+        url: "https://github.com/kubernetes/minikube/releases/download/{{ minikube_vers }}/minikube-linux-amd64"
         dest: /usr/local/bin/minikube
         mode: '0755'
         force: no
@@ -91,7 +93,7 @@
     - name: Download kubectl binary matching minikube_version
       become: true
       ansible.builtin.get_url:
-        url: "https://dl.k8s.io/release/{{ minikube_version }}/bin/linux/amd64/kubectl"
+        url: "https://dl.k8s.io/release/{{ kubectl_vers }}/bin/linux/amd64/kubectl"
         dest: "/usr/local/bin/kubectl"
         mode: '0755'
         force: yes
@@ -99,7 +101,7 @@
     - name: Download kubectl checksum matching minikube_version
       become: true
       ansible.builtin.get_url:
-        url: "https://dl.k8s.io/release/{{ minikube_version }}/bin/linux/amd64/kubectl.sha256"
+        url: "https://dl.k8s.io/release/{{ kubectl_vers }}/bin/linux/amd64/kubectl.sha256"
         dest: "/tmp/kubectl.sha256"
         mode: '0644'
         force: yes
@@ -172,20 +174,11 @@
 
     - name: Inform about manual dashboard URL retrieval and SSH tunneling
       ansible.builtin.debug:
-        msg: |
-          To access the Minikube Kubernetes dashboard, you can manually run:
-            minikube dashboard --url
-          This will output the full URL to open in your web browser.
-
-          Note: By default, the dashboard URL is accessible only from the machine running Minikube.
-          To access it remotely, it is recommended to set up an SSH tunnel, for example:
-
-            ssh -L 8001:127.0.0.1:<dashboard-port> <user>@<minikube-host>
-
-          Replace <dashboard-port> with the port shown by the dashboard command and <user>@<minikube-host> appropriately.
-
-          Keep the SSH tunnel open to maintain access to the dashboard.
-
-          This is crucial since the Minikube dashboard proxy listens on localhost only.
-
-          For more details, see https://minikube.sigs.k8s.io/docs/handbook/accessing/
+        msg:
+          - "To access the Minikube Kubernetes dashboard, you can manually run:"
+          - "   minikube dashboard --url"
+          - "This will output the full URL to open in your web browser."
+          - "" 
+          - "Note: By default, the dashboard URL is accessible only from localhost."
+          - "To access it remotely, it is recommended to set up an SSH tunnel, for example:"
+          - "  ssh -L 8001:127.0.0.1:<dashboard-port> <user>@<minikube-host>"
