@@ -5,6 +5,8 @@
     minikube_vers: "v1.33.0"
     kubectl_vers: "v1.33.0"
     non_root_user: vagrant  # <-- Replace with your remote user
+    memory: 1800m
+    cpus: 2
 
   tasks:
     - name: Install required packages for repository management
@@ -138,7 +140,7 @@
 
     - name: Start Minikube if not running as non-root user
       ansible.builtin.command:
-        cmd: /usr/local/bin/minikube start --driver=docker
+        cmd: /usr/local/bin/minikube start --driver=docker --memory="{{ memory }}" --cpus="{{ cpus }}"
       when: minikube_status.stdout != "Running"
       become: false
       remote_user: "{{ non_root_user }}"
