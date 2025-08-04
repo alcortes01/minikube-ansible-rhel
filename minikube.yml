@@ -3,6 +3,7 @@
   hosts: all
   vars:
     minikube_vers: "v1.36.0"
+    helm_vers: "v3.17.4"
     non_root_user: vagrant  # <-- Replace with your remote user
     memory: 1800m
     cpus: 2
@@ -62,6 +63,27 @@
           - jq
           - unzip
         state: present
+
+    - name: Download helm binary tarball
+      become: true
+      ansible.builtin.get_url:
+        url: "https://get.helm.sh/helm-{{ helm_vers }}-linux-amd64.tar.gz"
+        dest: /tmp/helm-{{ helm_vers }}-linux-amd64.tar.gz
+        mode: '0644'
+
+    - name: Unarchive helm binary
+      become: true
+      ansible.builtin.unarchive:
+        src: /tmp/helm-{{ helm_vers }}-linux-amd64.tar.gz
+        dest: /usr/local/bin/
+        remote_src: yes
+        extra_opts: [--strip-components=1]
+
+    - name: Clean up temporary files
+      become: true
+      ansible.builtin.file:
+        path: "/tmp/helm-{{ helm_vers }}-linux-amd64.tar.gz"
+        state: absent
 
     - name: Check if minikube binary exists and get checksum
       become: true
