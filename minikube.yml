@@ -2,7 +2,7 @@
 - name: Install and start Minikube on RHEL 9 using Docker CE
   hosts: all
   vars:
-    minikube_vers: "v1.33.0"
+    minikube_vers: "v1.36.0"
     non_root_user: vagrant  # <-- Replace with your remote user
     memory: 1800m
     cpus: 2
@@ -73,25 +73,11 @@
     - name: Download minikube binary idempotently
       become: true
       ansible.builtin.get_url:
-        # url: "https://storage.googleapis.com/minikube/releases/{{ minikube_version }}/minikube-linux-amd64"
         url: "https://github.com/kubernetes/minikube/releases/download/{{ minikube_vers }}/minikube-linux-amd64"
         dest: /usr/local/bin/minikube
         mode: '0755'
         force: no
         checksum: "{{ 'sha256:' + minikube_stat.stat.checksum if minikube_stat.stat.exists else omit }}"
-
-    - name: Verify minikube binary exists
-      become: true
-      ansible.builtin.stat:
-        path: /usr/local/bin/minikube
-      register: minikube_binary
-
-    - name: Fail if minikube binary missing
-      ansible.builtin.fail:
-        msg: "Minikube binary not found at /usr/local/bin/minikube"
-      when: not minikube_binary.stat.exists
-
-    # Run all minikube & docker related commands as non-root user
 
     - name: Check Minikube status as non-root user
       ansible.builtin.command:
