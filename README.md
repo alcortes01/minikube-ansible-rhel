@@ -11,6 +11,7 @@ This playbook:
 - Starts Minikube using the Docker driver as a non-root user  
 - Optionally starts the Minikube Kubernetes dashboard and displays the access URL  
 - Provides useful information for accessing the dashboard remotely via SSH tunneling  
+- Installs Helm
 
 ## Table of Contents
 
@@ -64,11 +65,17 @@ Edit the playbook’s `non_root_user` variable to match the username on your tar
 ansible-playbook -i inventory install_minikube.yml -e "non_root_user=your_username"
 ```
 
+5. **Run with Vagrant**
+If you have Vagrant and Hypervisor (Virtualbox):
+```
+vagrant up
+```
+
 ## Variables
 
 | Variable           | Default      | Description                                              |
 |--------------------|--------------|----------------------------------------------------------|
-| `minikube_version` | `v1.32.0`    | Version of Minikube binary to install                    |
+| `minikube_version` | `v1.36.0`    | Version of Minikube binary to install                    |
 | `non_root_user`    | _required_   | The user to run Minikube and Docker commands as          |
 
 Change variables in the playbook or pass them as extra-vars during execution.
