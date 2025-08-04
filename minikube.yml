@@ -3,7 +3,6 @@
   hosts: all
   vars:
     minikube_vers: "v1.33.0"
-    kubectl_vers: "v1.33.0"
     non_root_user: vagrant  # <-- Replace with your remote user
     memory: 1800m
     cpus: 2
@@ -52,7 +51,7 @@
         groups: docker
         append: yes
 
-    - name: Install additional required packages
+    - name: Install additional useful packages
       become: true
       ansible.builtin.yum:
         name:
@@ -91,41 +90,6 @@
       ansible.builtin.fail:
         msg: "Minikube binary not found at /usr/local/bin/minikube"
       when: not minikube_binary.stat.exists
-
-    - name: Download kubectl binary matching minikube_version
-      become: true
-      ansible.builtin.get_url:
-        url: "https://dl.k8s.io/release/{{ kubectl_vers }}/bin/linux/amd64/kubectl"
-        dest: "/usr/local/bin/kubectl"
-        mode: '0755'
-        force: yes
-
-    - name: Download kubectl checksum matching minikube_version
-      become: true
-      ansible.builtin.get_url:
-        url: "https://dl.k8s.io/release/{{ kubectl_vers }}/bin/linux/amd64/kubectl.sha256"
-        dest: "/tmp/kubectl.sha256"
-        mode: '0644'
-        force: yes
-
-    - name: Verify kubectl binary checksum (arm64)
-      become: true
-      ansible.builtin.shell: |
-        cd /usr/local/bin && echo "$(cat /tmp/kubectl.sha256) kubectl" | sha256sum --check
-      register: kubectl_checksum_result
-      changed_when: false
-      failed_when: "'OK' not in kubectl_checksum_result.stdout"
-
-    - name: Show kubectl version
-      become: false
-      ansible.builtin.command:
-        cmd: /usr/local/bin/kubectl version --client
-      register: kubectl_version
-      changed_when: false
-
-    - name: Display kubectl version info
-      ansible.builtin.debug:
-        msg: "{{ kubectl_version.stdout }}"
 
     # Run all minikube & docker related commands as non-root user
 
