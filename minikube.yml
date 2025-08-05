@@ -5,7 +5,7 @@
     minikube_vers: "v1.36.0"
     helm_vers: "v3.17.4"
     non_root_user: vagrant  # <-- Replace with your remote user
-    memory: 1800m
+    memory: 3g
     cpus: 2
 
   tasks:
@@ -149,6 +149,8 @@
     - name: Inform about manual dashboard URL retrieval and SSH tunneling
       ansible.builtin.debug:
         msg:
+          - "Enable metrics addon:"
+          - "   minikube addons enable metrics-server"
           - "To access the Minikube Kubernetes dashboard, you can manually run:"
           - "   minikube dashboard --url"
           - "This will output the full URL to open in your web browser."
