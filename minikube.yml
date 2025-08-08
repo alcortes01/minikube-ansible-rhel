@@ -43,14 +43,18 @@
       ansible.builtin.systemd:
         name: docker
         state: started
-        enabled: yes
+        enabled: true
 
     - name: Ensure non-root user is in docker group
       become: true
       ansible.builtin.user:
         name: "{{ non_root_user }}"
         groups: docker
-        append: yes
+        append: true
+  
+    - name: Reset ssh connection to allow user changes
+      ansible.builtin.meta:
+        reset_connection
 
     - name: Install additional useful packages
       become: true
@@ -76,7 +80,7 @@
       ansible.builtin.unarchive:
         src: /tmp/helm-{{ helm_vers }}-linux-amd64.tar.gz
         dest: /usr/local/bin/
-        remote_src: yes
+        remote_src: true
         extra_opts: [--strip-components=1]
 
     - name: Clean up temporary files
@@ -98,7 +102,7 @@
         url: "https://github.com/kubernetes/minikube/releases/download/{{ minikube_vers }}/minikube-linux-amd64"
         dest: /usr/local/bin/minikube
         mode: '0755'
-        force: no
+        force: false
         checksum: "{{ 'sha256:' + minikube_stat.stat.checksum if minikube_stat.stat.exists else omit }}"
 
     - name: Check Minikube status as non-root user
@@ -154,7 +158,7 @@
           - "To access the Minikube Kubernetes dashboard, you can manually run:"
           - "   minikube dashboard --url"
           - "This will output the full URL to open in your web browser."
-          - "" 
+          - " " 
           - "Note: By default, the dashboard URL is accessible only from localhost."
           - "To access it remotely, it is recommended to set up an SSH tunnel, for example:"
           - "  ssh -L 8001:127.0.0.1:<dashboard-port> <user>@<minikube-host>"
